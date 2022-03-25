@@ -24,6 +24,7 @@ class Hunter:
 
     def hunt_flats(self, max_pages=None):
         """Crawl, process and filter exposes"""
+
         filter_set = Filter.builder() \
                            .read_config(self.config) \
                            .filter_already_seen(self.id_watch) \
@@ -39,6 +40,7 @@ class Hunter:
 
         result = []
         # We need to iterate over this list to force the evaluation of the pipeline
+
         for expose in processor_chain.process(self.crawl_for_exposes(max_pages)):
             self.__log__.info('New offer: %s', expose['title'])
             result.append(expose)

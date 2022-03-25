@@ -42,7 +42,7 @@ class Crawler:
         'Sec-Fetch-Mode': 'navigate',
         'Sec-Fetch-User': '?1',
         'Sec-Fetch-Dest': 'document',
-        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9'
     }
 
     def configure_driver(self, driver_path, driver_arguments):
@@ -62,13 +62,14 @@ class Crawler:
     # pylint: disable=unused-argument
     def get_page(self, search_url, driver=None, page_no=None):
         """Applies a page number to a formatted search URL and fetches the exposes at that page"""
+
         return self.get_soup_from_url(search_url)
 
     def get_soup_from_url(self, url, driver=None, captcha_api_key=None, checkbox=None, afterlogin_string=None):
         """Creates a Soup object from the HTML at the provided URL"""
 
         self.rotate_user_agent()
-        resp = requests.get(url, headers=self.HEADERS)
+        resp = requests.get(url, headers=self.HEADERS, timeout=1)
         if resp.status_code != 200 and resp.status_code != 405:
             self.__log__.error("Got response (%i): %s", resp.status_code, resp.content)
         if self.config.use_proxy():
@@ -79,6 +80,7 @@ class Crawler:
                 self.resolvegeetest(driver, captcha_api_key)
             elif re.search("g-recaptcha", driver.page_source):
                 self.resolvecaptcha(driver, checkbox, afterlogin_string, captcha_api_key)
+
             return BeautifulSoup(driver.page_source, 'html.parser')
         return BeautifulSoup(resp.content, 'html.parser')
 
@@ -96,7 +98,7 @@ class Crawler:
                 try:
                     # Very low proxy read timeout, or it will get stuck on slow proxies
                     resp = requests.get(url, headers=self.HEADERS, proxies={"http": proxy, "https": proxy},
-                                        timeout=(20, 0.1))
+                                        timeout=(20, 0.5))
 
                     if resp.status_code != 200:
                         self.__log__.error("Got response (%i): %s", resp.status_code, resp.content)
@@ -104,6 +106,10 @@ class Crawler:
                         resolved = True
                         break
 
+                except KeyboardInterrupt:
+                    self.__log__.error("KeyboardInterrupt...")
+                    resolved = True
+                    break
                 except requests.exceptions.ConnectionError:
                     self.__log__.error("Connection failed for proxy %s. Trying new proxy...", proxy)
                 except requests.exceptions.Timeout:
@@ -261,4 +267,3 @@ class Crawler:
             return iframe
         except NoSuchElementException:
             print("Element not found")
-

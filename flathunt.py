@@ -48,6 +48,8 @@ def launch_flat_hunt(config, heartbeat=None):
     hunter.hunt_flats()
     counter = 0
 
+    __log__.debug("Launch starts from config: %s", pformat(config))
+
     while config.get('loop', dict()).get('active', False):
         counter += 1
         counter = heartbeat.send_heartbeat(counter)

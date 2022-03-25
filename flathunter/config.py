@@ -69,5 +69,8 @@ class Config:
     def captcha_enabled(self):
         return ("captcha" in self.config)
 
+    def scraper_api_enabled(self):
+        return ("scraperapi" in self.config)
+
     def use_proxy(self):
         return ("use_proxy_list" in self.config and self.config["use_proxy_list"])
