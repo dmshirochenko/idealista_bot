@@ -79,6 +79,7 @@ celerybeat-schedule
 .env
 
 # virtualenv
+.venv/
 venv/
 ENV/
 
@@ -99,3 +100,5 @@ config.yaml
 
 # Vscode
 .vscode
+sample-flathunter.service
+.DS_Store

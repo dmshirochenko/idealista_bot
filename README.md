@@ -11,18 +11,6 @@ A Telegram bot to help people with their flat search
 
 Flathunter is a Python application which periodically [scrapes](https://en.wikipedia.org/wiki/Web_scraping) property listings sites that the user has configured to find new apartment listings, and sends notifications of the new apartment to the user via [Telegram](https://en.wikipedia.org/wiki/Telegram_%28software%29).
 
-## Table of Contents
-
-- [Background](#background)
-- [Install](#install)
-    - [Installation on Linux](#installation-on-linux)
-- [Usage](#usage)
-	- [Command-line Interface](#command-line-interface)
-	- [Web Interface](#web-interface)
-- [Testing](#testing)
-- [Credits](#credits)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Background
 
@@ -225,17 +213,3 @@ This project is maintained by the members of the [Flat Hunters](https://github.c
 
 The original code was contributed by [@NodyHub](https://github.com/NodyHub), whose original idea this project was.
 
-### Contributers
-
-Other contributions were made along the way by
-
-- Bene
-- [@tschuehly](https://github.com/tschuehly)
-- [@Cugu](https://github.com/Cugu)
-- [@GerRudi](https://github.com/GerRudi)
-- [@xMordax](https://github.com/xMordax)
-- [@codders](https://github.com/codders)
-
-## Contributing
-
-If you want to make a contribution, please check out the contributor code of conduct ([en](CODE_OF_CONDUCT.en.md)/[de](CODE_OF_CONDUCT.de.md)) first. Pull requests are very welcome, as are [issues](https://github.com/flathunters/flathunter/issues). If you file an issue, please include as much information as possible about how to reproduce the issue.
