@@ -71,7 +71,7 @@ class CrawlIdealista(Crawler):
             details_title = ("%s - %s" % (title, floor)) if (len(floor) > 0) else title
 
             details = {
-                'id': int(row.get("data-adid")),
+                'id': int(row.get("data-element-id")),
                 'image': image,
                 'url': url,
                 'title': details_title,

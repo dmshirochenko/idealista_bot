@@ -100,5 +100,4 @@ config.yaml
 
 # Vscode
 .vscode
-sample-flathunter.service
 .DS_Store
