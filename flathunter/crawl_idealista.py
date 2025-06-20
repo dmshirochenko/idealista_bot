@@ -17,7 +17,7 @@ class CrawlIdealista(Crawler):
         self.config = config
         logging.getLogger("requests").setLevel(logging.WARNING)
         if config.scraper_api_enabled():
-            capthca_scraper_api = config.get('scraperapi')
+            capthca_scraper_api = config.get('brightdata')
             self.capthca_scraper_api_key = capthca_scraper_api.get('api_key', '')
 
     # pylint: disable=unused-argument
@@ -33,9 +33,16 @@ class CrawlIdealista(Crawler):
     def get_soup_from_url(self, url, driver=None, captcha_api_key=None, checkbox=None, afterlogin_string=None):
         """Creates a Soup object from the HTML at the provided URL"""
 
-        self.rotate_user_agent()
-        payload = {'api_key': captcha_api_key, 'url': url}
-        resp = requests.get('http://api.scraperapi.com', headers=self.HEADERS, params=payload)
+        self.rotate_user_agent() #not used with scraperapi or brightdata api
+
+        headers = {"Authorization": captcha_api_key, "Content-Type": "application/json"}
+
+        #payload = {'api_key': captcha_api_key, 'url': url} scraperapi
+        #resp = requests.get('http://api.scraperapi.com', headers=self.HEADERS, params=payload)scraperapi
+
+        payload = {"zone": "web_unlocker1", 'url': url, "format": "raw"}
+        resp = requests.post("https://api.brightdata.com/request?",json=payload, headers=headers)
+        
         if resp.status_code != 200 and resp.status_code != 405:
             self.__log__.error("Got response (%i): %s", resp.status_code, resp.content)
 
