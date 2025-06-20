@@ -71,6 +71,9 @@ class Config:
 
     def scraper_api_enabled(self):
         return ("scraperapi" in self.config)
+    
+    def brightdata_api_enabled(self):
+        return ("brightdata" in self.config)
 
     def use_proxy(self):
         return ("use_proxy_list" in self.config and self.config["use_proxy_list"])
