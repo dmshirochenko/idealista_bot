@@ -17,8 +17,10 @@ class CrawlIdealista(Crawler):
         self.config = config
         logging.getLogger("requests").setLevel(logging.WARNING)
         if config.scraper_api_enabled():
-            capthca_scraper_api = config.get('brightdata')
-            self.capthca_scraper_api_key = capthca_scraper_api.get('api_key', '')
+            capthca_scraper_api = config.get('oxylabs')
+            self.scraper_api_key_user = capthca_scraper_api.get('user', '')
+            self.scraper_api_password = capthca_scraper_api.get('password', '')
+            #self.capthca_scraper_api_key = capthca_scraper_api.get('api_key', '')
 
     # pylint: disable=unused-argument
     def get_page(self, search_url, driver=None, page_no=None):
@@ -27,26 +29,41 @@ class CrawlIdealista(Crawler):
         if (self.config.use_proxy()):
             return self.get_soup_with_proxy(search_url)
 
-        return self.get_soup_from_url(search_url, captcha_api_key=self.capthca_scraper_api_key)
+        return self.get_soup_from_url(search_url, capthca_scraper_api_user=self.scraper_api_key_user, capthca_scraper_api_password=self.scraper_api_password)
 
 
-    def get_soup_from_url(self, url, driver=None, captcha_api_key=None, checkbox=None, afterlogin_string=None):
+    def get_soup_from_url(self, url, driver=None, captcha_api_key=None, capthca_scraper_api_user=None, capthca_scraper_api_password=None, checkbox=None, afterlogin_string=None):
         """Creates a Soup object from the HTML at the provided URL"""
 
-        self.rotate_user_agent() #not used with scraperapi or brightdata api
+        # self.rotate_user_agent() #not used with scraperapi or brightdata api
 
-        headers = {"Authorization": captcha_api_key, "Content-Type": "application/json"}
+        # headers = {"Authorization": captcha_api_key, "Content-Type": "application/json"}
 
-        #payload = {'api_key': captcha_api_key, 'url': url} scraperapi
-        #resp = requests.get('http://api.scraperapi.com', headers=self.HEADERS, params=payload)scraperapi
+        # payload = {'api_key': captcha_api_key, 'url': url} scraperapi
+        # resp = requests.get('http://api.scraperapi.com', headers=self.HEADERS, params=payload) scraperapi
 
-        payload = {"zone": "web_unlocker1", 'url': url, "format": "raw"}
-        resp = requests.post("https://api.brightdata.com/request?",json=payload, headers=headers)
-        
-        if resp.status_code != 200 and resp.status_code != 405:
+        # payload = {"zone": "web_unlocker1", 'url': url, "format": "raw"}
+        # resp = requests.post("https://api.brightdata.com/request?",json=payload, headers=headers)
+
+        # Structure payload.
+        payload = {
+            'url': url
+        }
+
+        # Get response.
+        resp = requests.request(
+            'POST',
+            'https://realtime.oxylabs.io/v1/queries',
+            auth=(capthca_scraper_api_user, capthca_scraper_api_password), #Your credentials go here
+            json=payload,
+        )
+
+        data = resp.json()
+
+        if data["results"][0]["status_code"] != 200 and data["results"][0]["status_code"] != 405:
             self.__log__.error("Got response (%i): %s", resp.status_code, resp.content)
-
-        return BeautifulSoup(resp.content, 'html.parser')
+        
+        return BeautifulSoup(data["results"][0]["content"], 'html.parser')
 
     # pylint: disable=too-many-locals
     def extract_data(self, soup):

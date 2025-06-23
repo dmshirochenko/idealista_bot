@@ -140,6 +140,11 @@ scraperapi:
 scraperapi:
   api_key: 
 
+#oxylabs.io
+oxylabs:
+  user:
+  password:
+
 # You can select whether to be notified by telegram or via a mattermost
 # webhook. For all notifiers selected here a configuration must be provided
 # below.
