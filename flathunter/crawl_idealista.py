@@ -50,20 +50,32 @@ class CrawlIdealista(Crawler):
             'url': url
         }
 
-        # Get response.
-        resp = requests.request(
-            'POST',
-            'https://realtime.oxylabs.io/v1/queries',
-            auth=(capthca_scraper_api_user, capthca_scraper_api_password), #Your credentials go here
-            json=payload,
-        )
+        try:
+            resp = requests.post(
+                'https://realtime.oxylabs.io/v1/queries',
+                auth=(capthca_scraper_api_user, capthca_scraper_api_password),
+                json=payload,
+            )
+            resp.raise_for_status()
 
-        data = resp.json()
+            data = resp.json()
+            results = data.get("results", [])
 
-        if data["results"][0]["status_code"] != 200 and data["results"][0]["status_code"] != 405:
-            self.__log__.error("Got response (%i): %s", resp.status_code, resp.content)
-        
-        return BeautifulSoup(data["results"][0]["content"], 'html.parser')
+            if not results:
+                self.__log__.error("No results in response")
+
+            result = results[0]
+            status_code = result.get("status_code")
+            content = result.get("content")
+
+            if status_code not in [200] or not content:
+                self.__log__.error("Unexpected response (%s)", status_code)
+
+            return BeautifulSoup(content, 'html.parser')
+
+        except Exception as e:
+            self.__log__.exception("Failed to fetch or parse content from URL: %s", url)
+            return None
 
     # pylint: disable=too-many-locals
     def extract_data(self, soup):
