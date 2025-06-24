@@ -33,23 +33,33 @@ class SenderTelegram(Processor):
         return expose
 
     def send_msg(self, message):
-        """Send messages to each of the receivers in receiver_ids"""
+        """Send messages to each of the receivers in receiver_ids, with an inline 'Ask AI' button"""
         if self.receiver_ids is None:
             return
+
         for chat_id in self.receiver_ids:
-            url = 'https://api.telegram.org/bot%s/sendMessage?chat_id=%i&text=%s'
-            text = urllib.parse.quote_plus(message.encode('utf-8'))
-            self.__log__.debug(('token:', self.bot_token))
-            self.__log__.debug(('chatid:', chat_id))
-            self.__log__.debug(('text', text))
-            qry = url % (self.bot_token, chat_id, text)
-            self.__log__.debug("Retrieving URL %s", qry)
-            resp = requests.get(qry)
+            url = f'https://api.telegram.org/bot{self.bot_token}/sendMessage'
+
+            payload = {
+                "chat_id": chat_id,
+                "text": message,
+                "reply_markup": {
+                    "inline_keyboard": [
+                        [{"text": "Ask AI", "callback_data": "ask_ai"}]
+                    ]
+                },
+                "parse_mode": "HTML"  # optional; use only if your message uses formatting
+            }
+
+            self.__log__.debug("Sending payload: %s", payload)
+            resp = requests.post(url, json=payload)
             self.__log__.debug("Got response (%i): %s", resp.status_code, resp.content)
+
             data = resp.json()
 
-            # handle error
             if resp.status_code != 200:
-                status_code = resp.status_code
-                self.__log__.error("When sending bot message, we got status %i with message: %s",
-                                   status_code, data)
+                self.__log__.error(
+                    "When sending bot message, we got status %i with message: %s",
+                    resp.status_code, data
+                )
+
