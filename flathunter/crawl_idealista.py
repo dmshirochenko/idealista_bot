@@ -70,12 +70,13 @@ class CrawlIdealista(Crawler):
 
             if status_code not in [200] or not content:
                 self.__log__.error("Unexpected response (%s)", status_code)
+                return BeautifulSoup("", 'html.parser')  # Safe fallback
 
             return BeautifulSoup(content, 'html.parser')
 
         except Exception as e:
             self.__log__.exception("Failed to fetch or parse content from URL: %s", url)
-            return None
+            return BeautifulSoup("", 'html.parser')  # Safe fallback
 
     # pylint: disable=too-many-locals
     def extract_data(self, soup):
