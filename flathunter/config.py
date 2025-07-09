@@ -12,10 +12,11 @@ from flathunter.crawl_immobiliare import CrawlImmobiliare
 from flathunter.crawl_idealista import CrawlIdealista
 from flathunter.filter import Filter
 
+
 class Config:
     """Class to represent flathunter configuration"""
 
-    __log__ = logging.getLogger('flathunt')
+    __log__ = logging.getLogger("flathunt")
 
     def __init__(self, filename=None, string=None):
         if string is not None:
@@ -26,13 +27,15 @@ class Config:
             self.__log__.info("Using config %s", filename)
             with open(filename) as file:
                 self.config = yaml.safe_load(file)
-        self.__searchers__ = [CrawlImmobilienscout(self),
-                              CrawlWgGesucht(self),
-                              CrawlEbayKleinanzeigen(self),
-                              CrawlImmowelt(self),
-                              CrawlSubito(self),
-                              CrawlImmobiliare(self),
-                              CrawlIdealista(self)]
+        self.__searchers__ = [
+            CrawlImmobilienscout(self),
+            CrawlWgGesucht(self),
+            CrawlEbayKleinanzeigen(self),
+            CrawlImmowelt(self),
+            CrawlSubito(self),
+            CrawlImmobiliare(self),
+            CrawlIdealista(self),
+        ]
 
     def __iter__(self):
         """Emulate dictionary"""
@@ -67,16 +70,16 @@ class Config:
         return builder.build()
 
     def captcha_enabled(self):
-        return ("captcha" in self.config)
+        return "captcha" in self.config
 
     def scraper_api_enabled(self):
-        return ("scraperapi" in self.config)
-    
+        return "scraperapi" in self.config
+
     def brightdata_api_enabled(self):
-        return ("brightdata" in self.config)
-    
+        return "brightdata" in self.config
+
     def oxylabs_api_enabled(self):
-        return ("oxylabs" in self.config)
+        return "oxylabs" in self.config
 
     def use_proxy(self):
-        return ("use_proxy_list" in self.config and self.config["use_proxy_list"])
+        return "use_proxy_list" in self.config and self.config["use_proxy_list"]

@@ -8,8 +8,8 @@ from flathunter.abstract_crawler import Crawler
 class CrawlImmobiliare(Crawler):
     """Implementation of Crawler interface for Immobiliare"""
 
-    __log__ = logging.getLogger('flathunt')
-    URL_PATTERN = re.compile(r'https://www\.immobiliare\.it')
+    __log__ = logging.getLogger("flathunt")
+    URL_PATTERN = re.compile(r"https://www\.immobiliare\.it")
 
     def __init__(self, config):
         logging.getLogger("requests").setLevel(logging.WARNING)
@@ -20,16 +20,16 @@ class CrawlImmobiliare(Crawler):
         """Extracts all exposes from a provided Soup object"""
         entries = list()
 
-        findings = soup.find_all(lambda e: e.has_attr('data-id') \
-            and e.has_attr('class') \
-            and "listing-item" in e['class'])
+        findings = soup.find_all(
+            lambda e: e.has_attr("data-id") and e.has_attr("class") and "listing-item" in e["class"]
+        )
 
         for row in findings:
-            title_row = row.find('p', {"class": "titolo text-primary"})
+            title_row = row.find("p", {"class": "titolo text-primary"})
             title = title_row.text.strip()
-            url = title_row.find('a')['href']
-            image_item = row.find('div', {"class": "showcase__item"})
-            image = image_item.find('img')['src'] if image_item else ""
+            url = title_row.find("a")["href"]
+            image_item = row.find("div", {"class": "showcase__item"})
+            image = image_item.find("img")["src"] if image_item else ""
 
             # the items arrange like so:
             # 0: price
@@ -41,7 +41,7 @@ class CrawlImmobiliare(Crawler):
                 r".*\s([0-9]+.*)$",
                 # if there is a discount on the price, then there will be a <div>,
                 # otherwise the text we are looking for is directly inside the <li>
-                (price_li.find("div") if price_li.find("div") else price_li).text.strip()
+                (price_li.find("div") if price_li.find("div") else price_li).text.strip(),
             )[1]
 
             details_list = row.find_all("li", {"class": "lif__item"})
@@ -53,20 +53,19 @@ class CrawlImmobiliare(Crawler):
             address = address_match[1] if address_match else ""
 
             details = {
-                'id': int(row['data-id']),
-                'image': image,
-                'url': url,
-                'title': title,
-                'price': price,
-                'size': size,
-                'rooms': rooms,
-                'address': address,
-                'crawler': self.get_name()
+                "id": int(row["data-id"]),
+                "image": image,
+                "url": url,
+                "title": title,
+                "price": price,
+                "size": size,
+                "rooms": rooms,
+                "address": address,
+                "crawler": self.get_name(),
             }
 
             entries.append(details)
 
-        self.__log__.debug('extracted: {}'.format(entries))
+        self.__log__.debug("extracted: {}".format(entries))
 
         return entries
-

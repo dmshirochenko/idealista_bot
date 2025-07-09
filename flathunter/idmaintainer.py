@@ -13,6 +13,7 @@ __maintainer__ = "Nody"
 __email__ = "harrymcfly@protonmail.com"
 __status__ = "Prodction"
 
+
 class SaveAllExposesProcessor(Processor):
     """Processor that saves all exposes to the database"""
 
@@ -25,6 +26,7 @@ class SaveAllExposesProcessor(Processor):
         self.id_watch.save_expose(expose)
         return expose
 
+
 class AlreadySeenFilter:
     """Filter exposes that have already been processed"""
 
@@ -33,14 +35,16 @@ class AlreadySeenFilter:
 
     def is_interesting(self, expose):
         """Returns true if an expose should be kept in the pipeline"""
-        if not self.id_watch.is_processed(expose['id']):
-            self.id_watch.mark_processed(expose['id'])
+        if not self.id_watch.is_processed(expose["id"]):
+            self.id_watch.mark_processed(expose["id"])
             return True
         return False
 
+
 class IdMaintainer:
     """SQLite back-end for the database"""
-    __log__ = logging.getLogger('flathunt')
+
+    __log__ = logging.getLogger("flathunt")
 
     def __init__(self, db_name):
         self.db_name = db_name
@@ -48,18 +52,22 @@ class IdMaintainer:
 
     def get_connection(self):
         """Connects to the SQLite database. Connections are thread-local"""
-        connection = getattr(self.threadlocal, 'connection', None)
+        connection = getattr(self.threadlocal, "connection", None)
         if connection is None:
             try:
                 self.threadlocal.connection = lite.connect(self.db_name)
                 connection = self.threadlocal.connection
                 cur = self.threadlocal.connection.cursor()
-                cur.execute('CREATE TABLE IF NOT EXISTS processed (ID INTEGER)')
-                cur.execute('CREATE TABLE IF NOT EXISTS executions (timestamp timestamp)')
-                cur.execute('CREATE TABLE IF NOT EXISTS exposes (id INTEGER, created TIMESTAMP, \
-                                    crawler STRING, details BLOB, PRIMARY KEY (id, crawler))')
-                cur.execute('CREATE TABLE IF NOT EXISTS users \
-                                    (id INTEGER PRIMARY KEY, settings BLOB)')
+                cur.execute("CREATE TABLE IF NOT EXISTS processed (ID INTEGER)")
+                cur.execute("CREATE TABLE IF NOT EXISTS executions (timestamp timestamp)")
+                cur.execute(
+                    "CREATE TABLE IF NOT EXISTS exposes (id INTEGER, created TIMESTAMP, \
+                                    crawler STRING, details BLOB, PRIMARY KEY (id, crawler))"
+                )
+                cur.execute(
+                    "CREATE TABLE IF NOT EXISTS users \
+                                    (id INTEGER PRIMARY KEY, settings BLOB)"
+                )
                 self.threadlocal.connection.commit()
             except lite.Error as error:
                 self.__log__.error("Error %s:", error.args[0])
@@ -68,43 +76,49 @@ class IdMaintainer:
 
     def is_processed(self, expose_id):
         """Returns true if an expose has already been processed"""
-        self.__log__.debug('is_processed(%d)', expose_id)
+        self.__log__.debug("is_processed(%d)", expose_id)
         cur = self.get_connection().cursor()
-        cur.execute('SELECT id FROM processed WHERE id = ?', (expose_id,))
+        cur.execute("SELECT id FROM processed WHERE id = ?", (expose_id,))
         row = cur.fetchone()
         return row is not None
 
     def mark_processed(self, expose_id):
         """Mark an expose as processed in the database"""
-        self.__log__.debug('mark_processed(%d)', expose_id)
+        self.__log__.debug("mark_processed(%d)", expose_id)
         cur = self.get_connection().cursor()
-        cur.execute('INSERT INTO processed VALUES(?)', (expose_id,))
+        cur.execute("INSERT INTO processed VALUES(?)", (expose_id,))
         self.get_connection().commit()
 
     def save_expose(self, expose):
         """Saves an expose to a database"""
         cur = self.get_connection().cursor()
-        cur.execute('INSERT OR REPLACE INTO exposes(id, created, crawler, details) \
-                     VALUES (?, ?, ?, ?)',
-                    (int(expose['id']), datetime.datetime.now(),
-                     expose['crawler'], json.dumps(expose)))
+        cur.execute(
+            "INSERT OR REPLACE INTO exposes(id, created, crawler, details) \
+                     VALUES (?, ?, ?, ?)",
+            (int(expose["id"]), datetime.datetime.now(), expose["crawler"], json.dumps(expose)),
+        )
         self.get_connection().commit()
 
     def get_exposes_since(self, min_datetime):
         """Loads all exposes since the specified date"""
+
         def row_to_expose(row):
             obj = json.loads(row[2])
-            obj['created_at'] = row[0]
+            obj["created_at"] = row[0]
             return obj
+
         cur = self.get_connection().cursor()
-        cur.execute('SELECT created, crawler, details FROM exposes \
-                     WHERE created >= ? ORDER BY created DESC', (min_datetime,))
+        cur.execute(
+            "SELECT created, crawler, details FROM exposes \
+                     WHERE created >= ? ORDER BY created DESC",
+            (min_datetime,),
+        )
         return list(map(row_to_expose, cur.fetchall()))
 
     def get_recent_exposes(self, count, filter_set=None):
         """Returns up to 'count' recent exposes, filtered by the provided filter"""
         cur = self.get_connection().cursor()
-        cur.execute('SELECT details FROM exposes ORDER BY created DESC')
+        cur.execute("SELECT details FROM exposes ORDER BY created DESC")
         res = []
         next_batch = []
         while len(res) < count:
@@ -120,13 +134,13 @@ class IdMaintainer:
     def save_settings_for_user(self, user_id, settings):
         """Saves the user settings to the database"""
         cur = self.get_connection().cursor()
-        cur.execute('INSERT OR REPLACE INTO users VALUES (?, ?)', (user_id, json.dumps(settings)))
+        cur.execute("INSERT OR REPLACE INTO users VALUES (?, ?)", (user_id, json.dumps(settings)))
         self.get_connection().commit()
 
     def get_settings_for_user(self, user_id):
         """Loads the settings for a user from the database"""
         cur = self.get_connection().cursor()
-        cur.execute('SELECT settings FROM users WHERE id = ?', (user_id,))
+        cur.execute("SELECT settings FROM users WHERE id = ?", (user_id,))
         row = cur.fetchone()
         if row is None:
             return None
@@ -135,7 +149,7 @@ class IdMaintainer:
     def get_user_settings(self):
         """Loads all users' settings from the database"""
         cur = self.get_connection().cursor()
-        cur.execute('SELECT id, settings FROM users')
+        cur.execute("SELECT id, settings FROM users")
         res = []
         for row in cur.fetchall():
             res.append((row[0], json.loads(row[1])))
@@ -148,12 +162,12 @@ class IdMaintainer:
         row = cur.fetchone()
         if row is None:
             return None
-        return datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S.%f')
+        return datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S.%f")
 
     def update_last_run_time(self):
         """Saves the time of the most recent hunt to the database"""
         cur = self.get_connection().cursor()
         result = datetime.datetime.now()
-        cur.execute('INSERT INTO executions VALUES(?);', (result,))
+        cur.execute("INSERT INTO executions VALUES(?);", (result,))
         self.get_connection().commit()
         return result

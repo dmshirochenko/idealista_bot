@@ -9,8 +9,8 @@ from flathunter.abstract_crawler import Crawler
 class CrawlSubito(Crawler):
     """Implementation of Crawler interface for Subito"""
 
-    __log__ = logging.getLogger('flathunt')
-    URL_PATTERN = re.compile(r'https://www\.subito\.it')
+    __log__ = logging.getLogger("flathunt")
+    URL_PATTERN = re.compile(r"https://www\.subito\.it")
 
     def __init__(self, config):
         logging.getLogger("requests").setLevel(logging.WARNING)
@@ -58,22 +58,21 @@ class CrawlSubito(Crawler):
             )
 
             details = {
-                'id': re.sub(r"[^0-9]", "", id),
+                "id": re.sub(r"[^0-9]", "", id),
                 # the image is correct... however for some reason they don't show up
                 # in telegram's thumbnail
-                'image': image,
-                'url': url,
-                'title': title,
-                'price': price,
-                'size': size,
-                'rooms': rooms,
-                'address': address,
-                'crawler': self.get_name()
+                "image": image,
+                "url": url,
+                "title": title,
+                "price": price,
+                "size": size,
+                "rooms": rooms,
+                "address": address,
+                "crawler": self.get_name(),
             }
 
             entries.append(details)
 
-        self.__log__.debug('extracted: {}'.format(entries))
+        self.__log__.debug("extracted: {}".format(entries))
 
         return entries
-
