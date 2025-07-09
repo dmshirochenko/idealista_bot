@@ -78,3 +78,5 @@ Werkzeug==1.0.1
 wrapt==1.12.1
 yarl==1.6.0
 zipp==3.4.0
+SQLAlchemy>=1.4.0,<2.0.0
+psycopg2-binary>=2.8.6
