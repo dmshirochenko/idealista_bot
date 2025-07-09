@@ -15,6 +15,13 @@ loop:
 # Defaults to the current directory
 database_location: /Users/d.shirochenko/Documents/Python_Code/flathunter
 
+
+# Supabase configuration for reading existing tables
+supabase:
+    # Option 1: Direct database URL (recommended)
+    database_url: ""  # Set via environment variable SUPABASE_DATABASE_URL
+    
+
 # List the URLs containing your filter properties below.
 # Currently supported services: www.immobilienscout24.de,
 # www.immowelt.de, www.wg-gesucht.de, and www.ebay-kleinanzeigen.de.
