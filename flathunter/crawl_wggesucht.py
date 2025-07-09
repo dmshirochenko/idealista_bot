@@ -11,8 +11,8 @@ from flathunter.string_utils import remove_prefix
 class CrawlWgGesucht(Crawler):
     """Implementation of Crawler interface for WgGesucht"""
 
-    __log__ = logging.getLogger('flathunt')
-    URL_PATTERN = re.compile(r'https://www\.wg-gesucht\.de')
+    __log__ = logging.getLogger("flathunt")
+    URL_PATTERN = re.compile(r"https://www\.wg-gesucht\.de")
 
     def __init__(self, config):
         logging.getLogger("requests").setLevel(logging.WARNING)
@@ -23,64 +23,61 @@ class CrawlWgGesucht(Crawler):
         """Extracts all exposes from a provided Soup object"""
         entries = list()
 
-        findings = soup.find_all(lambda e: e.has_attr('id') and e['id'].startswith('liste-'))
-        existing_findings = list(
-            [e for e in findings if e.has_attr('class') and not 'display-none' in e['class']])
+        findings = soup.find_all(lambda e: e.has_attr("id") and e["id"].startswith("liste-"))
+        existing_findings = list([e for e in findings if e.has_attr("class") and not "display-none" in e["class"]])
 
-        base_url = 'https://www.wg-gesucht.de/'
+        base_url = "https://www.wg-gesucht.de/"
         for row in existing_findings:
-            title_row = row.find('h3', {"class": "truncate_title"})
+            title_row = row.find("h3", {"class": "truncate_title"})
             title = title_row.text.strip()
-            url = base_url + remove_prefix(title_row.find('a')['href'], "/")
-            image = re.match(r'background-image: url\((.*)\);',
-                             row.find('div', {"class": "card_image"}).find('a')['style'])[1]
+            url = base_url + remove_prefix(title_row.find("a")["href"], "/")
+            image = re.match(
+                r"background-image: url\((.*)\);", row.find("div", {"class": "card_image"}).find("a")["style"]
+            )[1]
             detail_string = row.find("div", {"class": "col-xs-11"}).text.strip().split("|")
-            details_array = list(map(lambda s: re.sub(' +', ' ',
-                                                      re.sub(r'\W', ' ', s.strip())),
-                                     detail_string))
+            details_array = list(map(lambda s: re.sub(" +", " ", re.sub(r"\W", " ", s.strip())), detail_string))
             numbers_row = row.find("div", {"class": "middle"})
             price = numbers_row.find("div", {"class": "col-xs-3"}).text.strip()
-            rooms_tmp = re.findall(r'\d Zimmer', details_array[0])
+            rooms_tmp = re.findall(r"\d Zimmer", details_array[0])
             rooms = rooms_tmp[0][:1] if rooms_tmp else 0
-            dates = re.findall(r'\d{2}.\d{2}.\d{4}',
-                               numbers_row.find("div", {"class": "text-center"}).text)
+            dates = re.findall(r"\d{2}.\d{2}.\d{4}", numbers_row.find("div", {"class": "text-center"}).text)
             if len(dates) == 0:
                 self.__log__.warning("No dates found - skipping")
                 continue
-            size = re.findall(r'\d{1,4}\sm²',
-                              numbers_row.find("div", {"class": "text-right"}).text)
+            size = re.findall(r"\d{1,4}\sm²", numbers_row.find("div", {"class": "text-right"}).text)
             if len(size) == 0:
                 self.__log__.warning("No size found - skipping")
                 continue
 
             details = {
-                'id': int(url.split('.')[-2]),
-                'image': image,
-                'url': url,
-                'title': "%s ab dem %s" % (title, dates[0]),
-                'price': price,
-                'size': size[0],
-                'rooms': rooms,
-                'address': url,
-                'crawler': self.get_name()
+                "id": int(url.split(".")[-2]),
+                "image": image,
+                "url": url,
+                "title": "%s ab dem %s" % (title, dates[0]),
+                "price": price,
+                "size": size[0],
+                "rooms": rooms,
+                "address": url,
+                "crawler": self.get_name(),
             }
             if len(dates) == 2:
-                details['from'] = dates[0]
-                details['to'] = dates[1]
+                details["from"] = dates[0]
+                details["to"] = dates[1]
             elif len(dates) == 1:
-                details['from'] = dates[0]
+                details["from"] = dates[0]
 
             entries.append(details)
 
-        self.__log__.debug('extracted: {}'.format(entries))
+        self.__log__.debug("extracted: {}".format(entries))
 
         return entries
 
     def load_address(self, url):
         """Extract address from expose itself"""
         response = self.get_soup_from_url(url)
-        address = ' '.join(response.find('div', {"class": "col-sm-4 mb10"})
-                           .find("a", {"href": "#mapContainer"}).text.strip().split())
+        address = " ".join(
+            response.find("div", {"class": "col-sm-4 mb10"}).find("a", {"href": "#mapContainer"}).text.strip().split()
+        )
         return address
 
     def get_soup_from_url(self, url, driver=None, captcha_api_key=None, checkbox=None, afterlogin_string=None):
@@ -106,5 +103,5 @@ class CrawlWgGesucht(Crawler):
             driver.get(url)
             if re.search("g-recaptcha", driver.page_source):
                 self.resolvecaptcha(driver, checkbox, afterlogin_string, captcha_api_key)
-            return BeautifulSoup(driver.page_source, 'html.parser')
-        return BeautifulSoup(resp.content, 'html.parser')
+            return BeautifulSoup(driver.page_source, "html.parser")
+        return BeautifulSoup(resp.content, "html.parser")

@@ -4,13 +4,14 @@ import re
 
 from flathunter.idmaintainer import AlreadySeenFilter
 
+
 class ExposeHelper:
     """Helper functions for extracting data from expose text"""
 
     @staticmethod
     def get_price(expose):
         """Extracts the price from a price text"""
-        price_match = re.search(r'\d+([\.,]\d+)?', expose['price'])
+        price_match = re.search(r"\d+([\.,]\d+)?", expose["price"])
         if price_match is None:
             return None
         return float(price_match[0].replace(".", "").replace(",", "."))
@@ -18,7 +19,7 @@ class ExposeHelper:
     @staticmethod
     def get_size(expose):
         """Extracts the size from a size text"""
-        size_match = re.search(r'\d+([\.,]\d+)?', expose['size'])
+        size_match = re.search(r"\d+([\.,]\d+)?", expose["size"])
         if size_match is None:
             return None
         return float(size_match[0].replace(",", "."))
@@ -26,10 +27,11 @@ class ExposeHelper:
     @staticmethod
     def get_rooms(expose):
         """Extracts the number of rooms from a room text"""
-        rooms_match = re.search(r'\d+([\.,]\d+)?', expose['rooms'])
+        rooms_match = re.search(r"\d+([\.,]\d+)?", expose["rooms"])
         if rooms_match is None:
             return None
         return float(rooms_match[0].replace(",", "."))
+
 
 class MaxPriceFilter:
     """Exclude exposes above a given price"""
@@ -44,6 +46,7 @@ class MaxPriceFilter:
             return True
         return price <= self.max_price
 
+
 class MinPriceFilter:
     """Exclude exposes below a given price"""
 
@@ -56,6 +59,7 @@ class MinPriceFilter:
         if price is None:
             return True
         return price >= self.min_price
+
 
 class MaxSizeFilter:
     """Exclude exposes above a given size"""
@@ -70,6 +74,7 @@ class MaxSizeFilter:
             return True
         return size <= self.max_size
 
+
 class MinSizeFilter:
     """Exclude exposes below a given size"""
 
@@ -82,6 +87,7 @@ class MinSizeFilter:
         if size is None:
             return True
         return size >= self.min_size
+
 
 class MaxRoomsFilter:
     """Exclude exposes above a given number of rooms"""
@@ -96,6 +102,7 @@ class MaxRoomsFilter:
             return True
         return rooms <= self.max_rooms
 
+
 class MinRoomsFilter:
     """Exclude exposes below a given number of rooms"""
 
@@ -109,6 +116,7 @@ class MinRoomsFilter:
             return True
         return rooms >= self.min_rooms
 
+
 class TitleFilter:
     """Exclude exposes whose titles match the provided terms"""
 
@@ -118,11 +126,12 @@ class TitleFilter:
     def is_interesting(self, expose):
         """True unless title matches the filtered titles"""
         combined_excludes = "(" + ")|(".join(self.filtered_titles) + ")"
-        found_objects = re.search(combined_excludes, expose['title'], re.IGNORECASE)
+        found_objects = re.search(combined_excludes, expose["title"], re.IGNORECASE)
         # send all non matching regex patterns
         if not found_objects:
             return True
         return False
+
 
 class PPSFilter:
     """Exclude exposes above a given price per square"""
@@ -139,6 +148,7 @@ class PPSFilter:
         pps = price / size
         return pps <= self.max_pps
 
+
 class PredicateFilter:
     """Include only those exposes satisfying the predicate"""
 
@@ -148,6 +158,7 @@ class PredicateFilter:
     def is_interesting(self, expose):
         """True if predicate is satisfied"""
         return self.predicate(expose)
+
 
 class FilterBuilder:
     """Construct a filter chain"""
@@ -198,6 +209,7 @@ class FilterBuilder:
         """Return the compiled filter"""
         return Filter(self.filters)
 
+
 class Filter:
     """Abstract filter object"""
 
@@ -206,8 +218,7 @@ class Filter:
 
     def is_interesting_expose(self, expose):
         """Apply all filters to this expose"""
-        return reduce((lambda x, y: x and y),
-                      map((lambda x: x.is_interesting(expose)), self.filters), True)
+        return reduce((lambda x, y: x and y), map((lambda x: x.is_interesting(expose)), self.filters), True)
 
     def filter(self, exposes):
         """Apply all filters to every expose in the list"""

@@ -10,6 +10,7 @@ from flathunter.sender_telegram import SenderTelegram
 from flathunter.gmaps_duration_processor import GMapsDurationProcessor
 from flathunter.idmaintainer import SaveAllExposesProcessor
 
+
 class ProcessorChainBuilder:
     """Builder pattern for building chains of processors"""
 
@@ -18,11 +19,11 @@ class ProcessorChainBuilder:
         self.config = config
 
     def send_messages(self, receivers=None):
-        notifiers = self.config.get('notifiers', list())
-        if 'telegram' in notifiers:
+        notifiers = self.config.get("notifiers", list())
+        if "telegram" in notifiers:
             """Add processor that sends Telegram messages for exposes"""
             self.processors.append(SenderTelegram(self.config, receivers=receivers))
-        if 'mattermost' in notifiers:
+        if "mattermost" in notifiers:
             """Add processor that sends Mattermost messages for exposes"""
             self.processors.append(SenderMattermost(self.config))
         return self
@@ -34,8 +35,7 @@ class ProcessorChainBuilder:
 
     def calculate_durations(self):
         """Add processor to calculate durations, if enabled"""
-        durations_enabled = "google_maps_api" in self.config \
-                            and self.config["google_maps_api"]["enable"]
+        durations_enabled = "google_maps_api" in self.config and self.config["google_maps_api"]["enable"]
         if durations_enabled:
             self.processors.append(GMapsDurationProcessor(self.config))
         return self
@@ -64,6 +64,7 @@ class ProcessorChainBuilder:
         """Build the processor chain"""
         return ProcessorChain(self.processors)
 
+
 class ProcessorChain:
     """Class to hold a chain of processors"""
 
@@ -72,8 +73,7 @@ class ProcessorChain:
 
     def process(self, exposes):
         """Process the sequences of exposes with the processor chain"""
-        return reduce((lambda exposes, processor: processor.process_exposes(exposes)),
-                      self.processors, exposes)
+        return reduce((lambda exposes, processor: processor.process_exposes(exposes)), self.processors, exposes)
 
     @staticmethod
     def builder(config):
