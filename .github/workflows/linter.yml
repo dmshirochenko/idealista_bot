@@ -31,7 +31,7 @@ jobs:
       - name: Install pylint and essential dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pylint
+          pip install pylint==2.12.2 astroid==2.9.3
           # Install only essential dependencies for linting
           pip install beautifulsoup4 requests PyYAML selenium aiohttp flask
           # Try to install other dependencies, but don't fail if they can't be installed
@@ -39,8 +39,4 @@ jobs:
       
       - name: Run PyLint
         run: |
-          pylint flathunter/ --output-format=text --reports=no --exit-zero
-      
-      - name: Run PyLint with failure on errors
-        run: |
-          pylint flathunter/ --output-format=text --reports=no --fail-under=8.0
+          pylint flathunter/ --output-format=text --reports=no --fail-under=9.5
