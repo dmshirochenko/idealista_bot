@@ -19,9 +19,9 @@ class CrawlIdealista(Crawler):
         logging.getLogger("requests").setLevel(logging.WARNING)
         if config.scraper_api_enabled():
             capthca_scraper_api = config.get("oxylabs")
-            self.scraper_api_key_user = capthca_scraper_api.get("user", "")
-            self.scraper_api_password = capthca_scraper_api.get("password", "")
-            # self.capthca_scraper_api_key = capthca_scraper_api.get('api_key', '')
+            #self.scraper_api_key_user = capthca_scraper_api.get("user", "")
+            #self.scraper_api_password = capthca_scraper_api.get("password", "")
+            self.capthca_scraper_api_key = capthca_scraper_api.get('api_key', '')
 
     # pylint: disable=unused-argument
     def get_page(self, search_url, driver=None, page_no=None):
@@ -32,8 +32,10 @@ class CrawlIdealista(Crawler):
 
         return self.get_soup_from_url(
             search_url,
-            capthca_scraper_api_user=self.scraper_api_key_user,
-            capthca_scraper_api_password=self.scraper_api_password,
+            captcha_api_key=self.capthca_scraper_api_key,
+            #capthca_scraper_api_user=self.scraper_api_key_user,
+            #capthca_scraper_api_password=self.scraper_api_password,
+
         )
 
     def get_soup_from_url(
@@ -47,43 +49,47 @@ class CrawlIdealista(Crawler):
         afterlogin_string=None,
     ):
         """Creates a Soup object from the HTML at the provided URL"""
-
-        # self.rotate_user_agent() #not used with scraperapi or brightdata api
-
-        # headers = {"Authorization": captcha_api_key, "Content-Type": "application/json"}
-
-        # payload = {'api_key': captcha_api_key, 'url': url} scraperapi
-        # resp = requests.get('http://api.scraperapi.com', headers=self.HEADERS, params=payload) scraperapi
-
-        # payload = {"zone": "web_unlocker1", 'url': url, "format": "raw"}
-        # resp = requests.post("https://api.brightdata.com/request?",json=payload, headers=headers)
-
-        # Structure payload.
-        payload = {"url": url}
-
         try:
-            resp = requests.post(
-                "https://realtime.oxylabs.io/v1/queries",
-                auth=(capthca_scraper_api_user, capthca_scraper_api_password),
-                json=payload,
-            )
+            # self.rotate_user_agent() #not used with scraperapi or brightdata api
+
+            headers = {"Authorization": captcha_api_key, "Content-Type": "application/json"}
+
+            # payload = {'api_key': captcha_api_key, 'url': url} scraperapi
+            # resp = requests.get('http://api.scraperapi.com', headers=self.HEADERS, params=payload) scraperapi
+
+            payload = {"zone": "web_unlocker1", 'url': url, "format": "raw"}
+            resp = requests.post("https://api.brightdata.com/request?",json=payload, headers=headers)
+
+            # Structure payload.
+            #payload = {"url": url}
+
+        
+            #resp = requests.post(
+            #    "https://realtime.oxylabs.io/v1/queries",
+            #    auth=(capthca_scraper_api_user, capthca_scraper_api_password),
+            #    json=payload,
+            #)
             resp.raise_for_status()
 
-            data = resp.json()
-            results = data.get("results", [])
+            #data = resp.json()
+            #results = data.get("results", [])
 
-            if not results:
-                self.__log__.error("No results in response")
+            #if not results:
+            #    self.__log__.error("No results in response")
 
-            result = results[0]
-            status_code = result.get("status_code")
-            content = result.get("content")
+            #result = results[0]
+            #status_code = result.get("status_code")
+            #content = result.get("content")
 
-            if status_code not in [200] or not content:
-                self.__log__.error("Unexpected response (%s)", status_code)
+            #if status_code not in [200] or not content:
+            #    self.__log__.error("Unexpected response (%s)", status_code)
+            #    return BeautifulSoup("", "html.parser")  # Safe fallback
+
+            if resp.status_code != 200:
+                self.__log__.error("Got response (%i): %s", resp.status_code, resp.content)
                 return BeautifulSoup("", "html.parser")  # Safe fallback
 
-            return BeautifulSoup(content, "html.parser")
+            return BeautifulSoup(resp.content, "html.parser")
 
         except Exception as e:
             self.__log__.exception("Failed to fetch or parse content from URL: %s", url)
