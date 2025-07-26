@@ -18,7 +18,7 @@ class CrawlIdealista(Crawler):
         self.config = config
         logging.getLogger("requests").setLevel(logging.WARNING)
         if config.scraper_api_enabled():
-            capthca_scraper_api = config.get("oxylabs")
+            capthca_scraper_api = config.get("brightdata")
             #self.scraper_api_key_user = capthca_scraper_api.get("user", "")
             #self.scraper_api_password = capthca_scraper_api.get("password", "")
             self.capthca_scraper_api_key = capthca_scraper_api.get('api_key', '')
