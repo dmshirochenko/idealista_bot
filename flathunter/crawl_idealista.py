@@ -59,7 +59,10 @@ class CrawlIdealista(Crawler):
         # resp = requests.post("https://api.brightdata.com/request?",json=payload, headers=headers)
 
         # Structure payload.
-        payload = {"url": url}
+        payload = {
+            "url": url,
+            "render": ""    
+        }
 
         try:
             resp = requests.post(
