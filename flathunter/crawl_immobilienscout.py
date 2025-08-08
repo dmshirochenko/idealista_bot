@@ -203,7 +203,6 @@ class CrawlImmobilienscout(Crawler):
                 details["price"] = ""
                 details["size"] = ""
                 details["rooms"] = ""
-            # print entries
             exist = False
             for expose in entries:
                 if expose_id == expose["id"]:

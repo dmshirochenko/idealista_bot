@@ -128,7 +128,6 @@ class CrawlIdealista(Crawler):
             if "no-pictures" not in picture_element.get("class"):
                 image = ""
             else:
-                print(picture_element)
                 image = picture_element.find("img")["src"]
 
             # It's possible that not all three fields are present
