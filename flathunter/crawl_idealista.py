@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 from flathunter.abstract_crawler import Crawler
 from random_user_agent.user_agent import UserAgent
+from flathunter.oxylab_client import PushPullScraperAPIsClient
 
 
 class CrawlIdealista(Crawler):
@@ -46,23 +47,42 @@ class CrawlIdealista(Crawler):
         checkbox=None,
         afterlogin_string=None,
     ):
+
+        try:
+            # Check if Oxylabs job id availabe in self.config
+            job_id = self.config.get("oxylabs_job_id", None)
+            if job_id:
+                self.__log__.info(f"Using existing Oxylabs job ID: {job_id}")
+                # Use the existing job ID to fetch results
+                oxylabs_client = PushPullScraperAPIsClient(self.scraper_api_key_user, self.scraper_api_password)
+                job_result = oxylabs_client.wait_for_and_get_job_results(job_id)
+                return BeautifulSoup(job_result["results"][0]["content"], "html.parser")
+            else:
+                # If no job ID is available, fall back to direct fetching
+                return self.get_soup_from_url_direct_fetching(
+                    url,
+                    capthca_scraper_api_user=capthca_scraper_api_user,
+                    capthca_scraper_api_password=capthca_scraper_api_password,
+                )
+
+        except Exception as e:
+            self.__log__.exception("Failed to fetch or parse content from URL: %s", url)
+            return BeautifulSoup("", "html.parser")  # Safe fallback
+
+    def get_soup_from_url_direct_fetching(
+        self,
+        url,
+        driver=None,
+        captcha_api_key=None,
+        capthca_scraper_api_user=None,
+        capthca_scraper_api_password=None,
+        checkbox=None,
+        afterlogin_string=None,
+    ):
         """Creates a Soup object from the HTML at the provided URL"""
 
-        # self.rotate_user_agent() #not used with scraperapi or brightdata api
-
-        # headers = {"Authorization": captcha_api_key, "Content-Type": "application/json"}
-
-        # payload = {'api_key': captcha_api_key, 'url': url} scraperapi
-        # resp = requests.get('http://api.scraperapi.com', headers=self.HEADERS, params=payload) scraperapi
-
-        # payload = {"zone": "web_unlocker1", 'url': url, "format": "raw"}
-        # resp = requests.post("https://api.brightdata.com/request?",json=payload, headers=headers)
-
         # Structure payload.
-        payload = {
-            "url": url,
-            "render": ""    
-        }
+        payload = {"url": url, "render": ""}
 
         try:
             resp = requests.post(
@@ -134,6 +154,6 @@ class CrawlIdealista(Crawler):
 
             entries.append(details)
 
-        self.__log__.debug("extracted: {}".format(entries))
+        # self.__log__.debug("extracted: {}".format(entries))
 
         return entries
