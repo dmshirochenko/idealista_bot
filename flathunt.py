@@ -17,6 +17,7 @@ from flathunter.hunter import Hunter
 from flathunter.config import Config
 from flathunter.heartbeat import Heartbeat
 from flathunter.user_manager import UserManager
+from flathunter.oxylab_client import PushPullScraperAPIsClient
 
 
 # init logging
@@ -61,10 +62,14 @@ def create_user_config(base_config, user_data):
     # Create a new config dict based on base config
     # Copy from base_config.config (the actual configuration dictionary)
     user_config_dict = base_config.config.copy()
-
+    print("User data for config:", user_data)
     # Override with user-specific settings
     if user_data.get("filter_url"):
         user_config_dict["urls"] = [user_data["filter_url"]]
+
+    # Add job_id if available
+    if user_data.get("oxylabs_job_id"):
+        user_config_dict["oxylabs_job_id"] = user_data["oxylabs_job_id"]
 
     if user_data.get("receiver_ids"):
         if "telegram" not in user_config_dict:
@@ -110,8 +115,18 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
         base_config: Base configuration
         heartbeat: Heartbeat instance
     """
+
     user_manager = UserManager(base_config)
     counter = 0
+
+    # Initialize OxyLab client if credentials are available
+    oxylab_client = None
+    if base_config.get("oxylabs"):
+        oxylab_username = base_config.get("oxylabs", {}).get("user")
+        oxylab_password = base_config.get("oxylabs", {}).get("password")
+        if oxylab_username and oxylab_password:
+            oxylab_client = PushPullScraperAPIsClient(oxylab_username, oxylab_password)
+            __log__.info("OxyLab client initialized")
 
     try:
         __log__.info("Starting multi-user flat hunting")
@@ -136,6 +151,26 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
                 __log__.warning("No paid users found, sleeping...")
                 time.sleep(base_config.get("loop", dict()).get("sleeping_time", 60 * 10))
                 continue
+
+            # Initialize OxyLab scraper jobs for each user
+            if oxylab_client:
+                for user_id, user_data in users_dict.items():
+                    try:
+                        if user_data.get("filter_url") and not user_data.get("oxylabs_job_id"):
+                            # Create scraper job payload
+                            payload = {"source": "universal", "url": user_data["filter_url"], "render": "html"}
+
+                            # Create job and store job ID in user_data
+                            job_info = oxylab_client.create_job(payload)
+                            job_id = job_info.get("id")
+
+                            if job_id:
+                                user_data["oxylabs_job_id"] = job_id
+                                # TODO: Update user_data in database with job_id
+                                __log__.info(f"Created OxyLab job {job_id} for user {user_id}")
+
+                    except Exception as e:
+                        __log__.error(f"Error creating OxyLab job for user {user_id}: {e}")
 
             # Process each user sequentially
             for i, (user_id, user_data) in enumerate(users_dict.items(), 1):
