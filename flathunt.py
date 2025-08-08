@@ -158,7 +158,7 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
                     try:
                         if user_data.get("filter_url") and not user_data.get("oxylabs_job_id"):
                             # Create scraper job payload
-                            payload = {"source": "universal", "url": user_data["filter_url"], "render": "html"}
+                            payload = {"source": "universal", "url": user_data["filter_url"], "render": ""}
 
                             # Create job and store job ID in user_data
                             job_info = oxylab_client.create_job(payload)
