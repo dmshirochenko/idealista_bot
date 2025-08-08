@@ -57,7 +57,7 @@ class CrawlEbayKleinanzeigen(Crawler):
         expose_ids = soup.find_all("article", class_="aditem")
 
         # soup.find_all(lambda e: e.has_attr('data-adid'))
-        # print(expose_ids)
+
         for idx, title_el in enumerate(title_elements):
             try:
                 price = expose_ids[idx].find(class_="aditem-main--middle--price").text.strip()

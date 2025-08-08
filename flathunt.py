@@ -62,7 +62,7 @@ def create_user_config(base_config, user_data):
     # Create a new config dict based on base config
     # Copy from base_config.config (the actual configuration dictionary)
     user_config_dict = base_config.config.copy()
-    print("User data for config:", user_data)
+
     # Override with user-specific settings
     if user_data.get("filter_url"):
         user_config_dict["urls"] = [user_data["filter_url"]]
