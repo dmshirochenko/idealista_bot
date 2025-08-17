@@ -12,11 +12,12 @@ class Hunter:
 
     __log__ = logging.getLogger("flathunt")
 
-    def __init__(self, config, id_watch):
+    def __init__(self, config, id_watch, already_seen_filter=None):
         self.config = config
         if not isinstance(self.config, Config):
             raise Exception("Invalid config for hunter - should be a 'Config' object")
         self.id_watch = id_watch
+        self.already_seen_filter = already_seen_filter
 
     def crawl_for_exposes(self, max_pages=None):
         """Trigger a new crawl of the configured URLs"""
@@ -31,15 +32,17 @@ class Hunter:
     def hunt_flats(self, max_pages=None):
         """Crawl, process and filter exposes"""
 
-        filter_set = Filter.builder().read_config(self.config).filter_already_seen(self.id_watch).build()
+        filter_builder = Filter.builder().read_config(self.config)
+        if self.already_seen_filter:
+            filter_builder.add_filter(self.already_seen_filter)
+        filter_set = filter_builder.build()
 
         processor_chain = (
             ProcessorChain.builder(self.config)
-            .save_all_exposes(self.id_watch)
             .apply_filter(filter_set)
-            .resolve_addresses()
-            .calculate_durations()
+            .save_all_exposes(self.id_watch)
             .send_messages()
+            .mark_as_processed(self.id_watch)
             .build()
         )
 

@@ -1,4 +1,4 @@
-"""SQLite implementation of IDMaintainer interface"""
+"""Supabase implementation of IDMaintainer interface"""
 import threading
 import sqlite3 as lite
 import datetime
@@ -6,12 +6,7 @@ import json
 import logging
 
 from flathunter.abstract_processor import Processor
-
-__author__ = "Nody"
-__version__ = "0.1"
-__maintainer__ = "Nody"
-__email__ = "harrymcfly@protonmail.com"
-__status__ = "Prodction"
+from flathunter.supabase_client import SupabaseClient
 
 
 class SaveAllExposesProcessor(Processor):
@@ -35,139 +30,67 @@ class AlreadySeenFilter:
 
     def is_interesting(self, expose):
         """Returns true if an expose should be kept in the pipeline"""
-        if not self.id_watch.is_processed(expose["id"]):
-            self.id_watch.mark_processed(expose["id"])
-            return True
-        return False
+        return not self.id_watch.is_processed(expose["id"], expose["crawler"])
 
 
 class IdMaintainer:
-    """SQLite back-end for the database"""
+    """Supabase back-end for the database"""
 
     __log__ = logging.getLogger("flathunt")
 
-    def __init__(self, db_name):
-        self.db_name = db_name
-        self.threadlocal = threading.local()
+    def __init__(self, supabase_client: SupabaseClient, user_id: str):
+        self.supabase = supabase_client
+        self.user_id = user_id
 
-    def get_connection(self):
-        """Connects to the SQLite database. Connections are thread-local"""
-        connection = getattr(self.threadlocal, "connection", None)
-        if connection is None:
-            try:
-                self.threadlocal.connection = lite.connect(self.db_name)
-                connection = self.threadlocal.connection
-                cur = self.threadlocal.connection.cursor()
-                cur.execute("CREATE TABLE IF NOT EXISTS processed (ID INTEGER)")
-                cur.execute("CREATE TABLE IF NOT EXISTS executions (timestamp timestamp)")
-                cur.execute(
-                    "CREATE TABLE IF NOT EXISTS exposes (id INTEGER, created TIMESTAMP, \
-                                    crawler STRING, details BLOB, PRIMARY KEY (id, crawler))"
-                )
-                cur.execute(
-                    "CREATE TABLE IF NOT EXISTS users \
-                                    (id INTEGER PRIMARY KEY, settings BLOB)"
-                )
-                self.threadlocal.connection.commit()
-            except lite.Error as error:
-                self.__log__.error("Error %s:", error.args[0])
-                raise error
-        return connection
+    @property
+    def already_seen_filter(self):
+        """Returns a filter object that can be used with filter()"""
+        return AlreadySeenFilter(self)
 
-    def is_processed(self, expose_id):
-        """Returns true if an expose has already been processed"""
-        self.__log__.debug("is_processed(%d)", expose_id)
-        cur = self.get_connection().cursor()
-        cur.execute("SELECT id FROM processed WHERE id = ?", (expose_id,))
-        row = cur.fetchone()
-        return row is not None
+    def is_processed(self, expose_id: int, crawler: str):
+        """Returns true if an expose has already been processed for the user"""
+        self.__log__.debug("is_processed(%d, %s) for user %s", expose_id, crawler, self.user_id)
+        try:
+            # We only care if it exists, and has been processed.
+            # The listings table should have a `processed` column.
+            # A listing is "processed" if it has been sent to the user.
+            # The presence of a row means it has been seen, `processed=true` means it has been sent.
+            # Here we check if we have sent it.
+            query = f"SELECT id FROM listings WHERE id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}' AND processed = true"
+            result = self.supabase.execute_select(query)
+            return len(result) > 0
+        except Exception as e:
+            self.__log__.error(f"Error checking if expose {expose_id} is processed for user {self.user_id}: {e}")
+            # Fail open, so we might send a duplicate, but we won't miss a flat.
+            return False
 
-    def mark_processed(self, expose_id):
-        """Mark an expose as processed in the database"""
-        self.__log__.debug("mark_processed(%d)", expose_id)
-        cur = self.get_connection().cursor()
-        cur.execute("INSERT INTO processed VALUES(?)", (expose_id,))
-        self.get_connection().commit()
+    def mark_processed(self, expose_id: int, crawler: str):
+        """Mark an expose as processed in the database for the user"""
+        self.__log__.debug("mark_processed(%d, %s) for user %s", expose_id, crawler, self.user_id)
+        try:
+            # This should be an upsert. If the row exists, update `processed`, otherwise do nothing.
+            # The `save_expose` should have already inserted the row with `processed=false`.
+            # So this should be an update.
+            query = f"UPDATE listings SET processed = true WHERE id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}'"
+            self.supabase.execute_commit(query)
+        except Exception as e:
+            self.__log__.error(f"Error marking expose {expose_id} as processed for user {self.user_id}: {e}")
 
     def save_expose(self, expose):
         """Saves an expose to a database"""
-        cur = self.get_connection().cursor()
-        cur.execute(
-            "INSERT OR REPLACE INTO exposes(id, created, crawler, details) \
-                     VALUES (?, ?, ?, ?)",
-            (int(expose["id"]), datetime.datetime.now(), expose["crawler"], json.dumps(expose)),
-        )
-        self.get_connection().commit()
+        self.__log__.debug("save_expose for user %s: %s", self.user_id, expose["id"])
+        try:
+            expose_id = int(expose["id"])
+            crawler = expose["crawler"]
+            details = json.dumps(expose).replace("'", "''")  # Basic SQL injection prevention for JSON
 
-    def get_exposes_since(self, min_datetime):
-        """Loads all exposes since the specified date"""
-
-        def row_to_expose(row):
-            obj = json.loads(row[2])
-            obj["created_at"] = row[0]
-            return obj
-
-        cur = self.get_connection().cursor()
-        cur.execute(
-            "SELECT created, crawler, details FROM exposes \
-                     WHERE created >= ? ORDER BY created DESC",
-            (min_datetime,),
-        )
-        return list(map(row_to_expose, cur.fetchall()))
-
-    def get_recent_exposes(self, count, filter_set=None):
-        """Returns up to 'count' recent exposes, filtered by the provided filter"""
-        cur = self.get_connection().cursor()
-        cur.execute("SELECT details FROM exposes ORDER BY created DESC")
-        res = []
-        next_batch = []
-        while len(res) < count:
-            if len(next_batch) == 0:
-                next_batch = cur.fetchmany()
-                if len(next_batch) == 0:
-                    break
-            expose = json.loads(next_batch.pop()[0])
-            if filter_set is None or filter_set.is_interesting_expose(expose):
-                res.append(expose)
-        return res
-
-    def save_settings_for_user(self, user_id, settings):
-        """Saves the user settings to the database"""
-        cur = self.get_connection().cursor()
-        cur.execute("INSERT OR REPLACE INTO users VALUES (?, ?)", (user_id, json.dumps(settings)))
-        self.get_connection().commit()
-
-    def get_settings_for_user(self, user_id):
-        """Loads the settings for a user from the database"""
-        cur = self.get_connection().cursor()
-        cur.execute("SELECT settings FROM users WHERE id = ?", (user_id,))
-        row = cur.fetchone()
-        if row is None:
-            return None
-        return json.loads(row[0])
-
-    def get_user_settings(self):
-        """Loads all users' settings from the database"""
-        cur = self.get_connection().cursor()
-        cur.execute("SELECT id, settings FROM users")
-        res = []
-        for row in cur.fetchall():
-            res.append((row[0], json.loads(row[1])))
-        return res
-
-    def get_last_run_time(self):
-        """Returns the time of the last hunt"""
-        cur = self.get_connection().cursor()
-        cur.execute("SELECT * FROM executions ORDER BY timestamp DESC LIMIT 1")
-        row = cur.fetchone()
-        if row is None:
-            return None
-        return datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S.%f")
-
-    def update_last_run_time(self):
-        """Saves the time of the most recent hunt to the database"""
-        cur = self.get_connection().cursor()
-        result = datetime.datetime.now()
-        cur.execute("INSERT INTO executions VALUES(?);", (result,))
-        self.get_connection().commit()
-        return result
+            # Upsert: Insert if not exists, do nothing if it exists.
+            # The combination of (id, crawler, user_id) is the primary key.
+            query = (
+                f"INSERT INTO listings (id, user_id, crawler, details, processed) "
+                f"VALUES ({expose_id}, '{self.user_id}', '{crawler}', '{details}', false) "
+                f"ON CONFLICT (id, crawler, user_id) DO NOTHING"
+            )
+            self.supabase.execute_commit(query)
+        except Exception as e:
+            self.__log__.error(f"Error saving expose {expose.get('id')} for user {self.user_id}: {e}")
