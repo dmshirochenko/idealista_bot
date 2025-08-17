@@ -166,6 +166,11 @@ class FilterBuilder:
     def __init__(self):
         self.filters = []
 
+    def add_filter(self, filter_instance):
+        """Adds a filter instance to the chain"""
+        self.filters.append(filter_instance)
+        return self
+
     def read_config(self, config):
         """Adds filters from a config dictionary"""
         if "excluded_titles" in config:

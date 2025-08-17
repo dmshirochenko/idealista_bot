@@ -102,15 +102,15 @@ class SupabaseClient:
             # Add LIMIT and OFFSET
             query += f" LIMIT {limit} OFFSET {offset}"
 
-            return self.execute_query(query)
+            return self.execute_select(query)
 
         except Exception as e:
             __log__.error(f"Error reading table {table_name}: {e}")
             raise
 
-    def execute_query(self, query: str) -> List[Dict[str, Any]]:
+    def execute_select(self, query: str) -> List[Dict[str, Any]]:
         """
-        Execute a SQL query and return results
+        Execute a SELECT SQL query and return results
 
         Args:
             query: SQL query string
@@ -130,6 +130,26 @@ class SupabaseClient:
 
         except SQLAlchemyError as e:
             __log__.error(f"Database error executing query: {e}")
+            raise
+        except Exception as e:
+            __log__.error(f"Error executing query: {e}")
+            raise
+
+    def execute_commit(self, query: str):
+        """
+        Execute a SQL query that does not return rows (INSERT, UPDATE, DELETE) and commit.
+
+        Args:
+            query: SQL query string
+        """
+        try:
+            with self.get_session() as session:
+                session.execute(text(query))
+                session.commit()
+
+        except SQLAlchemyError as e:
+            __log__.error(f"Database error executing query: {e}")
+            session.rollback()
             raise
         except Exception as e:
             __log__.error(f"Error executing query: {e}")

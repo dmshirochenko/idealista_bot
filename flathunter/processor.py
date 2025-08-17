@@ -1,6 +1,7 @@
 """Utility classes for building chains for processors"""
 from functools import reduce
 
+from flathunter.abstract_processor import Processor
 from flathunter.default_processors import AddressResolver
 from flathunter.default_processors import Filter
 from flathunter.default_processors import LambdaProcessor
@@ -9,6 +10,18 @@ from flathunter.sender_mattermost import SenderMattermost
 from flathunter.sender_telegram import SenderTelegram
 from flathunter.gmaps_duration_processor import GMapsDurationProcessor
 from flathunter.idmaintainer import SaveAllExposesProcessor
+
+
+class MarkAsProcessedProcessor(Processor):
+    """Processor that marks an expose as processed"""
+
+    def __init__(self, id_watch):
+        self.id_watch = id_watch
+
+    def process_expose(self, expose):
+        """Mark a single expose as processed"""
+        self.id_watch.mark_processed(expose["id"], expose["crawler"])
+        return expose
 
 
 class ProcessorChainBuilder:
@@ -58,6 +71,11 @@ class ProcessorChainBuilder:
     def save_all_exposes(self, id_watch):
         """Add processor that saves all exposes to disk"""
         self.processors.append(SaveAllExposesProcessor(self.config, id_watch))
+        return self
+
+    def mark_as_processed(self, id_watch):
+        """Mark exposes as processed in the database"""
+        self.processors.append(MarkAsProcessedProcessor(id_watch))
         return self
 
     def build(self):

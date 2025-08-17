@@ -18,6 +18,7 @@ from flathunter.config import Config
 from flathunter.heartbeat import Heartbeat
 from flathunter.user_manager import UserManager
 from flathunter.oxylab_client import PushPullScraperAPIsClient
+from flathunter.supabase_client import SupabaseClient
 
 
 # init logging
@@ -84,19 +85,20 @@ def create_user_config(base_config, user_data):
     return Config(string=config_yaml)
 
 
-def launch_flat_hunt_for_user(user_config, user_id, heartbeat=None):
+def launch_flat_hunt_for_user(user_config, user_id, supabase_client, heartbeat=None):
     """
     Launch flat hunting for a specific user
 
     Args:
         user_config: User-specific configuration
         user_id: User ID for logging and ID tracking
+        supabase_client: Supabase client instance
         heartbeat: Heartbeat instance
     """
     # Create user-specific ID maintainer
-    id_watch = IdMaintainer(f"{user_config.database_location()}/processed_ids_user_{user_id}.db")
+    id_watch = IdMaintainer(supabase_client, user_id)
 
-    hunter = Hunter(user_config, id_watch)
+    hunter = Hunter(user_config, id_watch, id_watch.already_seen_filter)
 
     __log__.info(f"Starting flat hunt for user {user_id}")
 
@@ -117,6 +119,7 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
     """
 
     user_manager = UserManager(base_config)
+    supabase_client = SupabaseClient(base_config)
     counter = 0
 
     # Initialize OxyLab client if credentials are available
@@ -181,7 +184,7 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
                     user_config = create_user_config(base_config, user_data)
 
                     # Hunt flats for this user
-                    launch_flat_hunt_for_user(user_config, user_id, heartbeat)
+                    launch_flat_hunt_for_user(user_config, user_id, supabase_client, heartbeat)
 
                     # Small delay between users to avoid overwhelming servers
                     if i < len(users_dict):
@@ -202,23 +205,7 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
         __log__.error(f"Error in multi-user flat hunting: {e}")
     finally:
         user_manager.close()
-
-
-def launch_flat_hunt(config, heartbeat=None):
-    """Starts the crawler / notification loop"""
-    id_watch = IdMaintainer("%s/processed_ids.db" % config.database_location())
-
-    hunter = Hunter(config, id_watch)
-    hunter.hunt_flats()
-    counter = 0
-
-    __log__.debug("Launch starts from config: %s", pformat(config))
-
-    while config.get("loop", dict()).get("active", False):
-        counter += 1
-        counter = heartbeat.send_heartbeat(counter)
-        time.sleep(config.get("loop", dict()).get("sleeping_time", 60 * 10))
-        hunter.hunt_flats()
+        supabase_client.close()
 
 
 def main():
