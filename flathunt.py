@@ -85,7 +85,7 @@ def create_user_config(base_config, user_data):
     return Config(string=config_yaml)
 
 
-def launch_flat_hunt_for_user(user_config, user_id, supabase_client, heartbeat=None):
+def launch_flat_hunt_for_user(user_config, user_id, supabase_client):
     """
     Launch flat hunting for a specific user
 
@@ -93,7 +93,6 @@ def launch_flat_hunt_for_user(user_config, user_id, supabase_client, heartbeat=N
         user_config: User-specific configuration
         user_id: User ID for logging and ID tracking
         supabase_client: Supabase client instance
-        heartbeat: Heartbeat instance
     """
     # Create user-specific ID maintainer
     id_watch = IdMaintainer(supabase_client, user_id)
@@ -109,17 +108,17 @@ def launch_flat_hunt_for_user(user_config, user_id, supabase_client, heartbeat=N
         __log__.error(f"Error hunting flats for user {user_id}: {e}")
 
 
-def launch_flat_hunt_multi_user(base_config, heartbeat=None):
+def launch_flat_hunt_multi_user(base_config):
     """
     Launch flat hunting for multiple users sequentially
 
     Args:
         base_config: Base configuration
-        heartbeat: Heartbeat instance
     """
 
     user_manager = UserManager(base_config)
     supabase_client = SupabaseClient(base_config)
+    admin_heartbeat = Heartbeat(base_config)
     counter = 0
 
     # Initialize OxyLab client if credentials are available
@@ -136,10 +135,6 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
 
         while base_config.get("loop", dict()).get("active", False):
             counter += 1
-
-            # Send heartbeat
-            if heartbeat:
-                counter = heartbeat.send_heartbeat(counter)
 
             # Get paid users for this cycle
             try:
@@ -184,7 +179,7 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
                     user_config = create_user_config(base_config, user_data)
 
                     # Hunt flats for this user
-                    launch_flat_hunt_for_user(user_config, user_id, supabase_client, heartbeat)
+                    launch_flat_hunt_for_user(user_config, user_id, supabase_client)
 
                     # Small delay between users to avoid overwhelming servers
                     if i < len(users_dict):
@@ -193,7 +188,10 @@ def launch_flat_hunt_multi_user(base_config, heartbeat=None):
                 except Exception as e:
                     __log__.error(f"Error processing user {user_id}: {e}")
                     continue
-
+            
+            #send admin telegram notification
+            admin_heartbeat.send_heartbeat()
+            
             # Sleep before next cycle
             sleep_time = base_config.get("loop", dict()).get("sleeping_time", 60 * 10)
             __log__.info(f"Completed cycle {counter}, sleeping for {sleep_time} seconds")
@@ -222,14 +220,6 @@ def main():
         help="Config file to use. If not set, try to use '%s/config.yaml' "
         % os.path.dirname(os.path.abspath(__file__)),
     )
-    parser.add_argument(
-        "--heartbeat",
-        "-hb",
-        action="store",
-        default=None,
-        help="Set the interval time to receive heartbeat messages to check that the bot is"
-        + 'alive. Accepted strings are "hour", "day", "week". Defaults to None.',
-    )
     args = parser.parse_args()
 
     # load config
@@ -251,17 +241,13 @@ def main():
         __log__.error("No Supabase database configuration found. Multi-user mode requires database access.")
         return
 
-    # get heartbeat instructions
-    heartbeat_interval = args.heartbeat
-    heartbeat = Heartbeat(config, heartbeat_interval)
-
     # adjust log level, if required
     if config.get("verbose"):
         __log__.setLevel(logging.DEBUG)
         __log__.debug("Settings from config: %s", pformat(config))
 
     # start hunting for flats in multi-user mode
-    launch_flat_hunt_multi_user(config, heartbeat)
+    launch_flat_hunt_multi_user(config)
 
 
 if __name__ == "__main__":

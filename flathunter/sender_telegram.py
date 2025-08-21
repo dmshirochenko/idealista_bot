@@ -13,13 +13,23 @@ class SenderTelegram(Processor):
 
     __log__ = logging.getLogger("flathunt")
 
-    def __init__(self, config, receivers=None):
+    def __init__(self, config, receivers=None, admin_config=False):
         self.config = config
-        self.bot_token = self.config.get("telegram", dict()).get("bot_token", "")
-        if receivers is None:
-            self.receiver_ids = self.config.get("telegram", dict()).get("receiver_ids", list())
+        if admin_config:
+            admin_conf = self.config.get("telegram_admin", dict())
+            self.bot_token = admin_conf.get("bot_token_admin")
+            receiver_id = admin_conf.get("receiver_id_admin")
+            self.receiver_ids = [receiver_id] if receiver_id else []
+            self.admin_config = True
         else:
-            self.receiver_ids = receivers
+            self.bot_token = self.config.get("telegram", dict()).get("bot_token", "")
+            if receivers is None:
+                self.receiver_ids = self.config.get("telegram", dict()).get(
+                    "receiver_ids", list()
+                )
+            else:
+                self.receiver_ids = receivers
+            self.admin_config = False
 
     def process_expose(self, expose):
         """Send a message to a user describing the expose"""
@@ -45,14 +55,19 @@ class SenderTelegram(Processor):
             return
 
         for chat_id in self.receiver_ids:
+            if not chat_id:
+                continue
             url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
 
             payload = {
                 "chat_id": chat_id,
                 "text": message,
-                "reply_markup": {"inline_keyboard": [[{"text": "Ask AI", "callback_data": "ask_ai"}]]},
                 "parse_mode": "HTML",  # optional; use only if your message uses formatting
             }
+            if not self.admin_config:
+                payload["reply_markup"] = {
+                    "inline_keyboard": [[{"text": "Ask AI", "callback_data": "ask_ai"}]]
+                }
 
             self.__log__.debug("Sending payload: %s", payload)
             resp = requests.post(url, json=payload)

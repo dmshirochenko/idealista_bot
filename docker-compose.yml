@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  flathunter:
+    build: .
+    container_name: flathunter
+    restart: unless-stopped
