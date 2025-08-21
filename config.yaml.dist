@@ -32,7 +32,7 @@ supabase:
 
 urls:
     - https://www.idealista.com/venta-viviendas/barcelona/eixample/con-precio-hasta_650000/?ordenado-por=fecha-publicacion-desc
-#   - https://www.idealista.com/ru/areas/alquiler-viviendas/con-precio-hasta_1300,precio-desde_800,de-un-dormitorio,de-dos-dormitorios,de-tres-dormitorios,ultimas-plantas,plantas-intermedias/?shape=%28%28qfq%7BF_laLaiAcOgdAsoBq%5Bc%5EcSg%7D%40zkBgeDpa%40%7Cj%40cS%7Cx%40zGvdAyCnc%40laBbeCy%60%40bm%40%29%29&ordenado-por=fecha-publicacion-desc
+#   - https://www.idealista.com/ru/areas/alquiler-viviendas/con-precio-hasta_1300,precio-desde_800,de-un-dormitorio,de-dos-dormitorios,ultimas-plantas,plantas-intermedias/?shape=%28%28qfq%7BF_laLaiAcOgdAsoBq%5Bc%5EcSg%7D%40zkBgeDpa%40%7Cj%40cS%7Cx%40zGvdAyCnc%40laBbeCy%60%40bm%40%29%29&ordenado-por=fecha-publicacion-desc
 #   - https://www.idealista.com/areas/alquiler-viviendas/con-precio-hasta_1300,de-un-dormitorio,de-dos-dormitorios,de-tres-dormitorios,de-cuatro-cinco-habitaciones-o-mas,plantas-intermedias/?shape=%28%28%7Bgt%7BF%7DxcLk_Akp%40iw%40ekAoQc%7C%40lEyv%40hRwu%40%60l%40eBnr%40a%7B%40rgBtaB%7DOxh%40ec%40%7CfAd%5BjnAy%7D%40tcA%29%29&ordenado-por=fecha-publicacion-desc
 #   - https://www.idealista.com/en/alquiler-viviendas/barcelona-barcelona/
 #   - https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-mieten?enteredFrom=one_step_search
@@ -171,9 +171,13 @@ notifiers:
 
 
 telegram:
-  bot_token: 
+  bot_token: "YOUR_BOT_TOKEN"
   receiver_ids:
-      - 
+    - "YOUR_RECEIVER_ID"
+
+telegram_admin:
+  bot_token_admin: ""
+  receiver_id_admin: ""
 
 
 # Sending messages via mattermost requires a webhook url provided by a
