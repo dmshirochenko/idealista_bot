@@ -55,10 +55,18 @@ class Heartbeat:
             unique_users_query = text("SELECT COUNT(DISTINCT user_id) FROM public.listings WHERE created > :created_after")
             unique_users = session.execute(unique_users_query, {'created_after': ten_minutes_ago}).scalar_one_or_none() or 0
 
+            # Query for overall total listings
+            overall_total_listings_query = text("SELECT COUNT(*) FROM public.listings")
+            overall_total_listings = session.execute(overall_total_listings_query).scalar_one_or_none() or 0
+
+            # Query for total unique users
+            total_unique_users_query = text("SELECT COUNT(DISTINCT user_id) FROM public.listings")
+            total_unique_users = session.execute(total_unique_users_query).scalar_one_or_none() or 0
+
             message = (
                 f"Heartbeat check:\n"
-                f"- Unique users with new listings in last 10 mins: {unique_users}\n"
-                f"- Total new listings in last 10 mins: {total_listings}"
+                f"- Unique users with new listings in last 10 mins: <b>{unique_users}</b> out of <b>{total_unique_users}</b>\n"
+                f"- Total new listings in last 10 mins: <b>{total_listings}</b> out of <b>{overall_total_listings}</b>"
             )
 
             self.notifier.send_msg(message)
