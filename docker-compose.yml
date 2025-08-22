@@ -2,6 +2,11 @@ version: '3.8'
 
 services:
   flathunter:
-    build: .
+    image: flathunter
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: flathunter
-    restart: unless-stopped
+    volumes:
+      - ./config.yaml:/app/config.yaml
+    restart: on-failure
