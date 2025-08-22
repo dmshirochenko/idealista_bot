@@ -17,7 +17,7 @@ if [ $EXIT_CODE -ne 0 ]; then
     python3 /app/alerter.py
     echo "Wrapper: Waiting 10 minutes before allowing a restart..."
     # Wait for 10 minutes (600 seconds)
-    sleep 60
+    sleep 600
     # Exit with the original error code to signal failure to Docker
     exit $EXIT_CODE
 fi

@@ -22,6 +22,9 @@ USER appuser
 # 7. Copy the rest of the application code, owned by the new user
 COPY --chown=appuser:appuser . .
 
+# 8. Make the entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
 # 8. Set the entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
 
