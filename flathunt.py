@@ -192,6 +192,8 @@ def launch_flat_hunt_multi_user(base_config):
             #send admin telegram notification
             admin_heartbeat.send_heartbeat()
             
+            raise SystemExit("Simulating a crash after one cycle for testing.")
+
             # Sleep before next cycle
             sleep_time = base_config.get("loop", dict()).get("sleeping_time", 60 * 10)
             __log__.info(f"Completed cycle {counter}, sleeping for {sleep_time} seconds")

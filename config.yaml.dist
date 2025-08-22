@@ -179,6 +179,10 @@ telegram_admin:
   bot_token_admin: ""
   receiver_id_admin: ""
 
+telegram_alerts:
+  bot_token_alerts: ""
+  receiver_id_alerts: ""
+
 
 # Sending messages via mattermost requires a webhook url provided by a
 # mattermost server. You can find a description how to set up a webhook with

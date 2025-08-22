@@ -22,6 +22,9 @@ USER appuser
 # 7. Copy the rest of the application code, owned by the new user
 COPY --chown=appuser:appuser . .
 
-# 8. Set the command to run the application
-# config.yaml is copied by the step above.
+# 8. Set the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# 9. Set the command to run the application
+# This will be passed to the entrypoint script
 CMD [ "python3", "-u", "flathunt.py", "-c", "config.yaml" ]
