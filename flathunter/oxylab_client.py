@@ -54,7 +54,7 @@ class PushPullScraperAPIsClient:
         while attempt < max_attempts:
             status = self.check_job_status(job_id)
             if status == "pending":
-                time.sleep(5)
+                time.sleep(1)
                 attempt += 1
             elif status == "done":
                 break

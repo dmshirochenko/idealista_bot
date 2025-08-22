@@ -170,6 +170,9 @@ def launch_flat_hunt_multi_user(base_config):
                     except Exception as e:
                         __log__.error(f"Error creating OxyLab job for user {user_id}: {e}")
 
+            # Add common 30-second delay before processing users
+            time.sleep(30)
+            
             # Process each user sequentially
             for i, (user_id, user_data) in enumerate(users_dict.items(), 1):
                 try:
