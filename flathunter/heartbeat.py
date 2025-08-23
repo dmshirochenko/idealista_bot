@@ -48,11 +48,11 @@ class Heartbeat:
             session = self.supabase_client.get_session()
 
             # Query for total listings
-            total_listings_query = text("SELECT COUNT(*) FROM public.listings WHERE created > :created_after")
+            total_listings_query = text("SELECT COUNT(*) FROM public.listings WHERE created_at > :created_after")
             total_listings = session.execute(total_listings_query, {'created_after': ten_minutes_ago}).scalar_one_or_none() or 0
 
             # Query for unique users
-            unique_users_query = text("SELECT COUNT(DISTINCT user_id) FROM public.listings WHERE created > :created_after")
+            unique_users_query = text("SELECT COUNT(DISTINCT user_id) FROM public.listings WHERE created_at > :created_after")
             unique_users = session.execute(unique_users_query, {'created_after': ten_minutes_ago}).scalar_one_or_none() or 0
 
             # Query for overall total listings

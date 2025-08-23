@@ -38,9 +38,10 @@ class IdMaintainer:
 
     __log__ = logging.getLogger("flathunt")
 
-    def __init__(self, supabase_client: SupabaseClient, user_id: str):
+    def __init__(self, supabase_client: SupabaseClient, user_id: str, filter_id: str):
         self.supabase = supabase_client
         self.user_id = user_id
+        self.filter_id = filter_id
 
     @property
     def already_seen_filter(self):
@@ -56,7 +57,7 @@ class IdMaintainer:
             # A listing is "processed" if it has been sent to the user.
             # The presence of a row means it has been seen, `processed=true` means it has been sent.
             # Here we check if we have sent it.
-            query = f"SELECT id FROM listings WHERE id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}' AND processed = true"
+            query = f"SELECT property_id FROM listings WHERE property_id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}' AND filter_id = '{self.filter_id}' AND processed = true"
             result = self.supabase.execute_select(query)
             return len(result) > 0
         except Exception as e:
@@ -71,7 +72,7 @@ class IdMaintainer:
             # This should be an upsert. If the row exists, update `processed`, otherwise do nothing.
             # The `save_expose` should have already inserted the row with `processed=false`.
             # So this should be an update.
-            query = f"UPDATE listings SET processed = true WHERE id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}'"
+            query = f"UPDATE listings SET processed = true, updated_at = now() WHERE property_id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}' AND filter_id = '{self.filter_id}'"
             self.supabase.execute_commit(query)
         except Exception as e:
             self.__log__.error(f"Error marking expose {expose_id} as processed for user {self.user_id}: {e}")
@@ -85,11 +86,11 @@ class IdMaintainer:
             details = json.dumps(expose).replace("'", "''")  # Basic SQL injection prevention for JSON
 
             # Upsert: Insert if not exists, do nothing if it exists.
-            # The combination of (id, crawler, user_id) is the primary key.
+            # The combination of (property_id, crawler, user_id, filter_id) is unique.
             query = (
-                f"INSERT INTO listings (id, user_id, crawler, details, processed) "
-                f"VALUES ({expose_id}, '{self.user_id}', '{crawler}', '{details}', false) "
-                f"ON CONFLICT (id, crawler, user_id) DO NOTHING"
+                f"INSERT INTO listings (property_id, user_id, filter_id, crawler, details, processed) "
+                f"VALUES ({expose_id}, '{self.user_id}', '{self.filter_id}', '{crawler}', '{details}', false) "
+                f"ON CONFLICT (property_id, crawler, user_id, filter_id) DO NOTHING"
             )
             self.supabase.execute_commit(query)
         except Exception as e:
