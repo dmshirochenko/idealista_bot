@@ -42,6 +42,24 @@ class IdMaintainer:
         self.supabase = supabase_client
         self.user_id = user_id
         self.filter_id = filter_id
+        self.processed_ids = self._fetch_processed_ids()
+
+    def _fetch_processed_ids(self):
+        """
+        Fetches all previously processed property IDs and their crawlers for the current user and filter,
+        and stores them in a set of tuples for fast in-memory lookups.
+        """
+        self.__log__.debug(f"Fetching processed IDs for user {self.user_id} and filter {self.filter_id}")
+        try:
+            # We select both property_id and crawler to create a unique tuple.
+            query = f"SELECT property_id, crawler FROM listings WHERE user_id = '{self.user_id}' AND filter_id = '{self.filter_id}' AND processed = true"
+            result = self.supabase.execute_select(query)
+            return {(item['property_id'], item['crawler']) for item in result}
+        except Exception as e:
+            self.__log__.error(f"Error fetching processed IDs: {e}")
+            # It's safer to not proceed than to risk sending many duplicate notifications.
+            # Raise an exception to stop the processing for this filter.
+            raise Exception(f"Could not fetch processed IDs for user {self.user_id}. Aborting to prevent duplicates.") from e
 
     @property
     def already_seen_filter(self):
@@ -49,24 +67,17 @@ class IdMaintainer:
         return AlreadySeenFilter(self)
 
     def is_processed(self, expose_id: int, crawler: str):
-        """Returns true if an expose has already been processed for the user"""
-        self.__log__.debug("is_processed(%d, %s) for user %s", expose_id, crawler, self.user_id)
-        try:
-            # We only care if it exists, and has been processed.
-            # The listings table should have a `processed` column.
-            # A listing is "processed" if it has been sent to the user.
-            # The presence of a row means it has been seen, `processed=true` means it has been sent.
-            # Here we check if we have sent it.
-            query = f"SELECT property_id FROM listings WHERE property_id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}' AND filter_id = '{self.filter_id}' AND processed = true"
-            result = self.supabase.execute_select(query)
-            return len(result) > 0
-        except Exception as e:
-            self.__log__.error(f"Error checking if expose {expose_id} is processed for user {self.user_id}: {e}")
-            # Fail open, so we might send a duplicate, but we won't miss a flat.
-            return False
+        """
+        Checks if an expose (as a tuple of ID and crawler) is in the set of processed IDs.
+        This avoids a database query for each check.
+        """
+        is_processed = (int(expose_id), crawler) in self.processed_ids
+        if is_processed:
+            self.__log__.debug("Expose %d from %s already processed for user %s", expose_id, crawler, self.user_id)
+        return is_processed
 
     def mark_processed(self, expose_id: int, crawler: str):
-        """Mark an expose as processed in the database for the user"""
+        """Mark an expose as processed in the database and update the in-memory set."""
         self.__log__.debug("mark_processed(%d, %s) for user %s", expose_id, crawler, self.user_id)
         try:
             # This should be an upsert. If the row exists, update `processed`, otherwise do nothing.
@@ -74,6 +85,8 @@ class IdMaintainer:
             # So this should be an update.
             query = f"UPDATE listings SET processed = true, updated_at = now() WHERE property_id = {expose_id} AND crawler = '{crawler}' AND user_id = '{self.user_id}' AND filter_id = '{self.filter_id}'"
             self.supabase.execute_commit(query)
+            # Add the tuple to the cache to prevent it from being processed again in the same run
+            self.processed_ids.add((int(expose_id), crawler))
         except Exception as e:
             self.__log__.error(f"Error marking expose {expose_id} as processed for user {self.user_id}: {e}")
 

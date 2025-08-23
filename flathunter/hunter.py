@@ -32,7 +32,9 @@ class Hunter:
     def hunt_flats(self, max_pages=None):
         """Crawl, process and filter exposes"""
 
-        filter_builder = Filter.builder().read_config(self.config)
+        # We build a filter set that only contains the already_seen_filter.
+        # This ensures the processor chain receives the correct object type.
+        filter_builder = Filter.builder()
         if self.already_seen_filter:
             filter_builder.add_filter(self.already_seen_filter)
         filter_set = filter_builder.build()
