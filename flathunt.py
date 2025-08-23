@@ -85,27 +85,28 @@ def create_user_config(base_config, user_data):
     return Config(string=config_yaml)
 
 
-def launch_flat_hunt_for_user(user_config, user_id, supabase_client):
+def launch_flat_hunt_for_user(user_config, user_id, filter_id, supabase_client):
     """
     Launch flat hunting for a specific user
 
     Args:
         user_config: User-specific configuration
         user_id: User ID for logging and ID tracking
+        filter_id: Filter ID for the user
         supabase_client: Supabase client instance
     """
     # Create user-specific ID maintainer
-    id_watch = IdMaintainer(supabase_client, user_id)
+    id_watch = IdMaintainer(supabase_client, user_id, filter_id)
 
     hunter = Hunter(user_config, id_watch, id_watch.already_seen_filter)
 
-    __log__.info(f"Starting flat hunt for user {user_id}")
+    __log__.info(f"Starting flat hunt for user {user_id} with filter {filter_id}")
 
     try:
         hunter.hunt_flats()
-        __log__.info(f"Completed flat hunt for user {user_id}")
+        __log__.info(f"Completed flat hunt for user {user_id} with filter {filter_id}")
     except Exception as e:
-        __log__.error(f"Error hunting flats for user {user_id}: {e}")
+        __log__.error(f"Error hunting flats for user {user_id} with filter {filter_id}: {e}")
 
 
 def launch_flat_hunt_multi_user(base_config):
@@ -136,60 +137,62 @@ def launch_flat_hunt_multi_user(base_config):
         while base_config.get("loop", dict()).get("active", False):
             counter += 1
 
-            # Get paid users for this cycle
+            # Get active filters for this cycle
             try:
-                users_dict = user_manager.get_paid_users()
-                __log__.info(f"Found {len(users_dict)} paid users")
+                filters_dict = user_manager.get_active_filters()
+                __log__.info(f"Found {len(filters_dict)} active filters")
             except Exception as e:
-                __log__.error(f"Error fetching users: {e}")
+                __log__.error(f"Error fetching filters: {e}")
                 time.sleep(base_config.get("loop", dict()).get("sleeping_time", 60 * 10))
                 continue
 
-            if not users_dict:
-                __log__.warning("No paid users found, sleeping...")
+            if not filters_dict:
+                __log__.warning("No active filters found, sleeping...")
                 time.sleep(base_config.get("loop", dict()).get("sleeping_time", 60 * 10))
                 continue
 
-            # Initialize OxyLab scraper jobs for each user
+            # Initialize OxyLab scraper jobs for each filter
             if oxylab_client:
-                for user_id, user_data in users_dict.items():
+                for filter_id, filter_data in filters_dict.items():
                     try:
-                        if user_data.get("filter_url") and not user_data.get("oxylabs_job_id"):
+                        if filter_data.get("filter_url") and not filter_data.get("oxylabs_job_id"):
                             # Create scraper job payload
-                            payload = {"source": "universal", "url": user_data["filter_url"], "render": ""}
+                            payload = {"source": "universal", "url": filter_data["filter_url"], "render": ""}
 
-                            # Create job and store job ID in user_data
+                            # Create job and store job ID in filter_data
                             job_info = oxylab_client.create_job(payload)
                             job_id = job_info.get("id")
 
                             if job_id:
-                                user_data["oxylabs_job_id"] = job_id
-                                # TODO: Update user_data in database with job_id
-                                __log__.info(f"Created OxyLab job {job_id} for user {user_id}")
+                                filter_data["oxylabs_job_id"] = job_id
+                                # TODO: Update filter_data in database with job_id
+                                __log__.info(f"Created OxyLab job {job_id} for filter {filter_id}")
 
                     except Exception as e:
-                        __log__.error(f"Error creating OxyLab job for user {user_id}: {e}")
+                        __log__.error(f"Error creating OxyLab job for filter {filter_id}: {e}")
 
-            # Add common 30-second delay before processing users
+            # Add common 30-second delay before processing filters
+            __log__.info("Waiting 30 seconds for OxyLab jobs to initialize...")
             time.sleep(30)
             
-            # Process each user sequentially
-            for i, (user_id, user_data) in enumerate(users_dict.items(), 1):
+            # Process each filter sequentially
+            for i, (filter_id, filter_data) in enumerate(filters_dict.items(), 1):
                 try:
-                    __log__.info(f"Processing user {user_id} ({i}/{len(users_dict)})")
+                    user_id = filter_data.get("user_id")
+                    __log__.info(f"Processing filter {filter_id} for user {user_id} ({i}/{len(filters_dict)})")
 
-                    # Create user-specific config
-                    user_config = create_user_config(base_config, user_data)
+                    # Create filter-specific config
+                    user_config = create_user_config(base_config, filter_data)
 
-                    # Hunt flats for this user
-                    launch_flat_hunt_for_user(user_config, user_id, supabase_client)
+                    # Hunt flats for this filter
+                    launch_flat_hunt_for_user(user_config, user_id, filter_id, supabase_client)
 
-                    # Small delay between users to avoid overwhelming servers
-                    if i < len(users_dict):
+                    # Small delay between filters to avoid overwhelming servers
+                    if i < len(filters_dict):
                         time.sleep(5)
 
                 except Exception as e:
-                    __log__.error(f"Error processing user {user_id}: {e}")
+                    __log__.error(f"Error processing filter {filter_id}: {e}")
                     continue
             
             #send admin telegram notification
